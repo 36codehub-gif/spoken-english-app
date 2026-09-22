@@ -5,14 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI English Practice Partner</title>
     <style>
-        body { font-family: 'Arial', sans-serif; background: #eef2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
-        .chat-card { background: white; width: 100%; max-width: 450px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f2f5; 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .chat-card { 
+            background: white; 
+            width: 100%; 
+            max-width: 450px; 
+            border-radius: 15px; 
+            padding: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
         h2 { text-align: center; color: #1a73e8; margin-top: 0; }
+        
+        .topic-container { margin-bottom: 15px; }
+        label { font-size: 14px; font-weight: bold; color: #333; display: block; margin-bottom: 5px; }
+        select { 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 8px; 
+            border: 1px solid #ccc; 
+            font-size: 15px; 
+            background: #fff;
+        }
+
         .status { text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; }
-        .box { background: #f8f9fa; border-left: 4px solid #1a73e8; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 15px; }
+        .box { 
+            background: #f8f9fa; 
+            border-left: 4px solid #1a73e8; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border-radius: 6px; 
+            font-size: 15px; 
+        }
         .feedback { background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
         .ai-box { background: #e8f0fe; border-left: 4px solid #34a853; color: #174ea6; }
-        .btn { background: #1a73e8; color: white; border: none; padding: 15px; font-size: 16px; border-radius: 30px; width: 100%; cursor: pointer; font-weight: bold; }
+        .btn { 
+            background: #1a73e8; 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            font-size: 16px; 
+            border-radius: 30px; 
+            width: 100%; 
+            cursor: pointer; 
+            font-weight: bold; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
         .btn:disabled { background: #a0c3ff; }
     </style>
 </head>
@@ -20,6 +64,19 @@
 
 <div class="chat-card">
     <h2>🗣️ AI English Tutor</h2>
+    
+    <!-- Topic Selection Dropdown -->
+    <div class="topic-container">
+        <label for="topic-select">🎯 Select Practice Topic:</label>
+        <select id="topic-select">
+            <option value="Casual Daily Conversation">💬 Casual Chat</option>
+            <option value="Job Interview Practice">💼 Job Interview</option>
+            <option value="Ordering Food at a Restaurant">🍕 Restaurant Ordering</option>
+            <option value="At the Airport & Travel">✈️ Travel & Airport</option>
+            <option value="Shopping & Asking Prices">🛍️ Shopping Chat</option>
+        </select>
+    </div>
+
     <div id="status" class="status">Tap the button and speak in English</div>
 
     <div class="box">
@@ -41,10 +98,11 @@
 </div>
 
 <script>
-    // ⚠️ अपनी API Key यहाँ डालें
+    // ⚠️ अपनी Google Gemini API Key यहाँ डालें
     const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; 
 
     const talkBtn = document.getElementById('talk-btn');
+    const topicSelect = document.getElementById('topic-select');
     const userText = document.getElementById('user-text');
     const grammarText = document.getElementById('grammar-text');
     const aiResponse = document.getElementById('ai-response');
@@ -69,8 +127,8 @@
             userText.innerText = transcript;
             statusText.innerText = "AI is thinking & analyzing grammar...";
 
-            // Call Gemini API
-            await fetchAIResponse(transcript);
+            const selectedTopic = topicSelect.value;
+            await fetchAIResponse(transcript, selectedTopic);
 
             talkBtn.innerText = "🎤 Start Speaking";
             talkBtn.disabled = false;
@@ -84,16 +142,17 @@
             statusText.innerText = "Try again";
         };
     } else {
-        alert("Please use Chrome browser on mobile for speech features.");
+        alert("Please use Google Chrome browser on mobile.");
     }
 
-    async function fetchAIResponse(userPrompt) {
+    async function fetchAIResponse(userPrompt, topic) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
-        const systemInstruction = `You are a friendly English speaking tutor. 
-        Analyze the user's input and reply in JSON format with two keys:
+        const systemInstruction = `You are an English speaking tutor. The current conversation context is: "${topic}". 
+        Roleplay according to this topic (e.g., if topic is Interview, act like an interviewer).
+        Analyze the user's input and reply strictly in JSON format with two keys:
         1. "correction": If there are grammar mistakes, correct them simply. If perfect, write "Perfect sentence!".
-        2. "reply": A natural, friendly 1-2 sentence response to keep the conversation going in English.`;
+        2. "reply": A natural, friendly 1-2 sentence roleplay response in English to keep the topic going.`;
 
         const requestBody = {
             contents: [{
@@ -116,21 +175,19 @@
             grammarText.innerText = parsedData.correction;
             aiResponse.innerText = parsedData.reply;
 
-            // Speak AI response aloud
             speakText(parsedData.reply);
 
         } catch (error) {
             console.error(error);
-            aiResponse.innerText = "Error connecting to AI. Please check your API key.";
+            aiResponse.innerText = "Error connecting to AI. Check your API key.";
         }
     }
 
-    // Text to Speech (AI आवाज़ में बोलेगा)
     function speakText(text) {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = 0.9; // बोलन की स्पीड (Normal)
+            utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
         }
     }
